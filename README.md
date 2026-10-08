@@ -2,7 +2,7 @@
 
 Minijuego pixel art estilo dino de Chrome protagonizado por Rufi. Saltá cacas y charcos, juntá patitas de pollo.
 
-**Jugar:** https://nchiari.github.io/rufi-run/
+**Jugar:** https://nchiari.github.io/Rufi-Run/
 
 - Tocá / Espacio: saltar (mantené para saltar más alto)
 - Doble toque: doble salto

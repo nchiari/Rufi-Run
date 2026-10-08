@@ -29,71 +29,124 @@ const FONT = "'Press Start 2P', monospace";
 
 // ---------- paleta Rufi ----------
 const P = {
-  W:'#f6f1e7', w:'#d8cfbf', B:'#b8733a', b:'#8a4f22', G:'#e3dccf', g:'#bfb5a5',
-  K:'#1d1a1a', C:'#6f7783', c:'#4b525c', E:'#ffffff', s:'#c49468', N:'#2b2424', P:'#e79aa0'
+  o:'#3a2416', B:'#c07a3c', b:'#8a4f22', L:'#dba872', C:'#efe2cc', G:'#ddd6cb', g:'#aaa298',
+  K:'#141111', k:'#55504f', E:'#ffffff', r:'#e6ddd0', P:'#d98a7a', p:'#e7708a',
+  W:'#f6f1e7', w:'#d5ccbd', s:'#c49468', c:'#7d8592', d:'#4b525c'
 };
 function r(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
 
-// Rufi mirando a la derecha. caja ~32x24. (x,y) = esquina sup-izq
-function drawRufi(x, y, t, state, blink){
-  x = Math.round(x); y = Math.round(y);
-  const R=(dx,dy,w,h,c)=>r(x+dx,y+dy,w,h,P[c]);
-  const run = state==='run';
-  const ph = Math.floor(t*14)%4;
-  // sombra
-  if(state!=='dead') { ctx.globalAlpha=.25; r(x+3, GROUND-1, 24, 2, '#000'); ctx.globalAlpha=1; }
-  // cola (blanca, base marrón), menea
-  const wag = run ? (ph%2) : Math.floor(t*6)%2;
-  R(2,9,2,3,'B'); R(1,6-wag,2,4,'W'); R(0,3-wag,2,4,'W'); R(0,2-wag,1,1,'w');
-  // patas traseras
-  const legs = run ? [[0,2],[2,0],[0,-1],[-1,1]][ph] : (state==='jump'? [ -1, -1 ] : [0,0]);
-  const jl = state==='jump';
-  // pata trasera lejana
-  R(6, 16, 2, jl?3:5+legs[1]*0, 'w'); R(6, jl?19:21, 2,1,'K');
-  // pata delantera lejana
-  R(20,16,2, jl?3:5, 'w'); R(jl?21:20, jl?19:21, 2,1,'K');
-  // cuerpo
-  R(4,8,18,8,'W'); R(5,7,16,1,'W'); R(6,16,14,1,'w');
-  // mancha marrón en el lomo (montura)
-  R(8,7,10,6,'B'); R(9,13,8,1,'B'); R(8,7,10,1,'b'); R(17,8,2,4,'B');
-  // cadera marrón
-  R(3,8,3,4,'B'); R(4,7,2,1,'B');
-  // pecas
-  R(6,13,1,1,'s'); R(19,13,1,1,'s'); R(14,15,1,1,'s'); R(4,13,1,1,'s'); R(21,10,1,1,'s');
-  // patas cercanas animadas
-  const a = run ? legs[0] : 0, bq = run ? legs[1] : 0;
-  if(jl){ R(4,15,3,3,'W'); R(2,17,3,2,'W'); R(2,19,2,1,'K');
-          R(19,15,3,3,'W'); R(22,16,3,2,'W'); R(24,17,2,1,'K'); }
-  else {
-    R(4+a,16,3,5-Math.max(0,-a),'W'); R(4+a,21-Math.max(0,-a),3,1,'K'); R(5+a,18,1,1,'s');
-    R(18+bq,16,3,5-Math.max(0,-bq),'W'); R(18+bq,21-Math.max(0,-bq),3,1,'K'); R(19+bq,17,1,1,'s');
-  }
-  // pecho + cuello
-  R(20,5,4,11,'W'); R(22,14,2,1,'s');
-  // collar gris
-  R(21,6,3,6,'C'); R(21,11,3,1,'c');
-  // cabeza
-  const hb = run && ph%2 ? 1 : 0;
-  const hy = hb;
-  R(23,1+hy,7,7,'B'); R(24,0+hy,5,1,'B');
-  // canas / blaze
-  R(26,0+hy,1,3,'G');
-  // hocico gris-blanco
-  R(28,4+hy,4,4,'G'); R(27,6+hy,2,2,'G'); R(24,7+hy,6,1,'g');
-  // nariz
-  R(31,3+hy,2,3,'K'); R(32,3+hy,1,1,'N');
-  // ojo grande (Rufi tiene ojos de foca)
-  if(state==='dead'){ R(26,3+hy,1,1,'K');R(27,4+hy,1,1,'K');R(28,3+hy,1,1,'K');R(26,5+hy,1,1,'K');R(28,5+hy,1,1,'K'); }
-  else if(blink){ R(26,4+hy,3,1,'K'); }
-  else { R(26,2+hy,3,3,'K'); R(26,2+hy,1,1,'E'); R(26,1+hy,3,1,'b'); }
-  // boca / lengua al correr
-  R(29,7+hy,3,1,'g');
-  if(run && Math.floor(t*4)%3===0) R(29,8+hy,2,2,'P');
-  // orejas: la trasera parada con punta caída, la delantera doblada
-  const flop = jl ? -1 : (run && ph%2 ? 1 : 0);
-  R(22,-2+hy,2,4,'b'); R(21,-3+hy+flop,2,2,'b');
-  R(25,-2+hy,3,3,'B'); R(27,-3+hy-flop,2,2,'B'); R(29,-2+hy-flop,1,2,'b'); R(26,-1+hy,1,1,'P');
+// Sprites hi-bit: 1 px de sprite = 0.5 px del mundo (el doble de detalle que el escenario)
+const HEAD = [
+  '..ooooo..................ooooo..',
+  '.obbBBBoo..............ooBBBbbo.',
+  'obBPPPBBBoo..........ooBBBPPPBbo',
+  'obPPPPPBBBBoooooooooBBBBPPPPPbbo',
+  '.oPPPPBBBBBBBBBBBBBBBBBBBBPPPPo.',
+  '..oobbBBBBBBBBBLLBBBBBBBBBBbo...',
+  '.....obBBBBBBBBLLBBBBBBBBBbo....',
+  '.....oBBBBBBBBLLLLBBBBBBBBBo....',
+  '....obBBBooooBLLLLBooooBBBBbo...',
+  '....oBBBoKKKKoLLLLoKKKKoBBBBo...',
+  '....oBBoKKKKKKoLLoKKKKKKoBBBo...',
+  '....oBBoKEEKKKoLLoKEEKKKoBBBo...',
+  '....oBBoKEKKKKoLLoKEKKKKoBBBo...',
+  '....oBBoKKKKKKrLLrKKKKKKoBBBo...',
+  '....oLBrrKKKKrGLLGrKKKKrrBBLo...',
+  '....oLLBBrrrrGGCCGGrrrrBBLLo....',
+  '.....oLLLLGGGGGCCGGGGGLLLLo.....',
+  '......oLGGGGGGGCCGGGGGGGLo......',
+  '.......oGGGGGGGGGGGGGGGGo.......',
+  '.......oGGGGGGGGGGGGGGGGo.......',
+  '........oGGGGKKKKKKKGGGGo.......',
+  '........oGGGKKKKKKKKKGGGo.......',
+  '........oGGGKkkKKKkkKGGGo.......',
+  '........ogGGgKKKKKKKgGGgo.......',
+  '.........ogGGgggKgggGGgo........',
+  '..........ogGGGGgGGGGgo.........',
+  '...........oogggggggoo..........',
+  '.............ooooooo............'
+];
+const BODY = [
+  '.oo.............................................',
+  'oWWo............................................',
+  'oWWo............................................',
+  '.oWWo...........................................',
+  '.oWWo...........................................',
+  '..oWWo..........................................',
+  '..oWWo...........ooooooooooooooo................',
+  '...oBBo.ooooooooobbbbbbbbbbbbbbbbooooooo........',
+  '...oBBBoBBBWWWWWWBBBBBBBBBBBBBBBBBWWWWWWoo......',
+  '...oBBBBBBBWWsWWWBBBBBBBBBBBBBBBBBWWWWWWWWo.....',
+  '...oBBBBBBWWWWWWWBBBBBBBBBBBBBBBBWWWsWWWWWo.....',
+  '...oBBBBBWWWWWWWWWBBBBBBBBBBBBBBWWWWWWWWWWo.....',
+  '...oBBBBWWWWsWWWWWWBBBBBBBBBBBBWWWWWWWWsWWo.....',
+  '...oBBBWWWWWWWWWWWWWBBBBBBBBBWWWWWWWWWWWWWo.....',
+  '...oWWWWWWWWWWWWWsWWWWWWWWWWWWWWWWsWWWWWWWo.....',
+  '....oWWWWWWsWWWWWWWWWWWWWWWWWWWWWWWWWWWWWo......',
+  '....owWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWwo......',
+  '.....owwWWWWWWwwwwwwwwwwwwwwwwWWWWWWWWwwo.......',
+  '......oooooooooooooooooooooooooooooooooo........'
+];
+function edit(rows, fn){ const g=rows.map(r=>r.split('')); fn(g); return g.map(r=>r.join('')); }
+const EYES = [[8,13],[18,23]]; // columnas x0..x1 de cada ojo (filas 9..13)
+const HEAD_BLINK = edit(HEAD, g=>{ for(let y=9;y<=13;y++) for(const [a,b] of EYES) for(let x=a;x<=b;x++) if('KEr'.includes(g[y][x])) g[y][x] = y===12 ? 'o' : 'B'; });
+const HEAD_DEAD = edit(HEAD, g=>{ for(let y=9;y<=13;y++) for(const [a,b] of EYES) for(let x=a;x<=b;x++) if('KEr'.includes(g[y][x])) g[y][x]='B';
+  for(const [a] of EYES) for(let i=0;i<5;i++){ g[9+i][a+i]='K'; g[13-i][a+i]='K'; } });
+const HEAD_TONGUE = edit(HEAD, g=>{ g[25][15]='p'; g[25][16]='p'; g[26][14]='o'; g[26][15]='p'; g[26][16]='p'; g[26][17]='o'; g[27][15]='o'; g[27][16]='o'; });
+function bake(rows){
+  const c=document.createElement('canvas'); c.width=Math.max(...rows.map(r=>r.length)); c.height=rows.length;
+  const g=c.getContext('2d');
+  rows.forEach((row,y)=>{ for(let x=0;x<row.length;x++){ const col=P[row[x]]; if(col){ g.fillStyle=col; g.fillRect(x,y,1,1); } } });
+  return c;
 }
+const SPR = { head:bake(HEAD), blink:bake(HEAD_BLINK), dead:bake(HEAD_DEAD), tongue:bake(HEAD_TONGUE), body:bake(BODY) };
+
+// Rufi mirando a cámara mientras corre a la derecha. caja 36x24 del mundo. (x,y) = esquina sup-izq
+function drawRufi(x, y, t, state, blink){
+  x = Math.round(x*2)/2; y = Math.round(y*2)/2;
+  // se dibuja 1.3x más grande, anclado en las patas
+  ctx.save(); ctx.translate(x, y+24); ctx.scale(RK,RK); ctx.translate(-x, -(y+24));
+  const S=(dx,dy,w,h,c)=>{ ctx.fillStyle=P[c]; ctx.fillRect(x+dx/2, y+dy/2, w/2, h/2); };
+  const run = state==='run', jl = state==='jump';
+  const ph = Math.floor(t*14)%4;
+  if(state!=='dead'){ ctx.globalAlpha=.25; r(x+2, GROUND-1, 34, 2, '#000'); ctx.globalAlpha=1; }
+  // pata: columna x, desplazamiento horizontal, altura recogida
+  const leg=(lx, off, lift, far)=>{
+    const top=34, len=13-lift, X=lx+off;
+    S(X-1,top,7,len+1,'o');
+    S(X,top,5,len, far?'w':'W');
+    if(!far){ S(X+1,top+3,1,1,'s'); S(X+3,top+6,1,1,'s'); }
+    S(X,top+len-1,5,1,'w'); S(X+1,top+len,1,1,'K'); S(X+3,top+len,1,1,'K');
+  };
+  const cyc = [[0,3,0,2],[3,0,2,0],[0,-3,0,2],[-3,0,2,0]][ph];
+  if(jl){ leg(9,-3,5,true); leg(37,3,5,true); }
+  else if(run){ leg(10,cyc[1],cyc[3],true); leg(38,cyc[0],cyc[2],true); }
+  else { leg(10,0,0,true); leg(38,0,0,true); }
+  // cola que se menea
+  const wag = run ? (ph%2) : Math.floor(t*6)%2;
+  ctx.drawImage(SPR.body, 0,0,6,8, x, y+9-wag/2, 3, 4);
+  ctx.drawImage(SPR.body, 6,0,42,8, x+3, y+9, 21, 4);
+  ctx.drawImage(SPR.body, 0,8,48,11, x, y+13, 24, 5.5);
+  // patas cercanas
+  if(jl){ leg(5,-3,5,false); leg(41,4,6,false); }
+  else if(run){ leg(6,cyc[0],cyc[2],false); leg(34,cyc[1],cyc[3],false); }
+  else { leg(6,0,0,false); leg(34,0,0,false); }
+  // pecho + collar
+  S(40,22,12,13,'o'); S(41,22,10,12,'W'); S(42,30,1,1,'s'); S(47,32,1,1,'s');
+  S(40,23,13,4,'o'); S(41,24,11,2,'c'); S(43,24,2,2,'d'); S(48,24,2,1,'d');
+  // cabeza (bobea al correr)
+  const hb = (run && ph%2) ? 1 : 0, hy = jl ? -1 : hb;
+  const img = state==='dead' ? SPR.dead : blink ? SPR.blink : (run && Math.floor(t*3)%3===0) ? SPR.tongue : SPR.head;
+  ctx.drawImage(img, x+18, y-1+hy/2, 16, 14);
+  ctx.restore();
+}
+const RK = 1.3;
+// Retrato grande de Rufi para las pantallas de título y game over
+function drawPortrait(cx, cy, scale, img){
+  const w=32*scale/2, h=28*scale/2;
+  ctx.drawImage(img, Math.round(cx-w/2), Math.round(cy-h/2), w, h);
+}
+
 
 // ---------- obstáculos / items ----------
 function drawPoop(x,y,t){
@@ -200,7 +253,7 @@ const DEATH_POOP = ['¡Rufi pisó caca! 💩','Eso no era chocolate...','Plan B:
 const DEATH_WATER = ['¡Rufi odia mojarse las patas!','Charco 1 - Rufi 0','Splash. Rufi ofendido.','Necesita toalla YA'];
 
 function reset(){
-  dog = {x:28, y:GROUND-22, vy:0, onGround:true, holding:false, jumps:0};
+  dog = {x:28, y:GROUND-24, vy:0, onGround:true, holding:false, jumps:0};
   obs=[]; paws=[]; parts=[]; floaters=[]; score=0; dist=0; speed=120; nextSpawn=1.2; nextPaw=2; combo=0; lastMilestone=0;
 }
 reset();
@@ -252,7 +305,7 @@ function update(dt){
   // física
   const g = (dog.holding && dog.vy<0) ? 520 : 1100;
   dog.vy += g*dt; dog.y += dog.vy*dt;
-  if(dog.y >= GROUND-22){ if(!dog.onGround){ puff(dog.x+6,GROUND,4,'#e8cc98'); } dog.y=GROUND-22; dog.vy=0; dog.onGround=true; dog.jumps=0; }
+  if(dog.y >= GROUND-24){ if(!dog.onGround){ puff(dog.x+6,GROUND,4,'#e8cc98'); } dog.y=GROUND-24; dog.vy=0; dog.onGround=true; dog.jumps=0; }
   if(dog.onGround && Math.random()<dt*12) parts.push({x:dog.x+4,y:GROUND-1,vx:-speed*.3,vy:-20-Math.random()*20,life:.3,col:'#d9b77e'});
 
   nextSpawn -= dt; if(nextSpawn<=0) spawn();
@@ -261,12 +314,12 @@ function update(dt){
   obs.forEach(o=>o.x -= speed*dt); obs=obs.filter(o=>o.x+o.w>-20);
   paws.forEach(p=>p.x -= speed*dt); paws=paws.filter(p=>p.x>-20 && !p.got);
 
-  const hb = {x:dog.x+5, y:dog.y+4, w:22, h:16};
+  const hb = {x:dog.x+6, y:dog.y+2, w:30, h:19};
   for(const o of obs){
     const ob = o.type==='poop' ? {x:o.x+4,y:o.y+1,w:o.w-7,h:o.h-1} : {x:o.x+3,y:o.y,w:o.w-6,h:o.h};
     if(hit(hb,ob)){ die(o.type); return; }
   }
-  const pb = {x:dog.x, y:dog.y-4, w:34, h:28};
+  const pb = {x:dog.x, y:dog.y-8, w:46, h:32};
   for(const p of paws){
     if(hit(pb,{x:p.x,y:p.y,w:10,h:12})){
       p.got=true; combo++;
@@ -329,7 +382,7 @@ function draw(){
   for(const o of obs) o.type==='poop' ? drawPoop(o.x,o.y,t) : drawPuddle(o.x,o.y,o.w,t);
   for(const p of paws) drawPaw(p.x,p.y,t,p.gold);
 
-  if(state==='title'){ drawRufi(dog.x+40, GROUND-22, t, 'run', blinkT<0); }
+  if(state==='title'){ drawRufi(dog.x+40, GROUND-24, t, 'run', blinkT<0); }
   else drawRufi(dog.x, dog.y, t, state==='over'?'dead':(dog.onGround?'run':'jump'), blinkT<0);
 
   for(const p of parts) r(p.x,p.y,2,2,p.col);
@@ -340,14 +393,15 @@ function draw(){
 
   // HUD
   if(state!=='title'){
-    text(String(Math.floor(score)).padStart(5,'0'), W-8, 8, 8, '#fff', 'right');
-    text('HI '+String(best).padStart(5,'0'), W-8, 20, 6, '#ffe36e', 'right');
-    if(combo>1 && state==='play') text('COMBO x'+Math.min(5,combo), 8, 8, 6, '#ffd84a', 'left');
+    text(String(Math.floor(score)).padStart(5,'0'), 8, 8, 8, '#fff', 'left');
+    text('HI '+String(best).padStart(5,'0'), 8, 20, 6, '#ffe36e', 'left');
+    if(combo>1 && state==='play') text('COMBO x'+Math.min(5,combo), 8, 30, 6, '#ffd84a', 'left');
   }
 
   if(state==='title'){
     ctx.globalAlpha=.35; r(0,0,W,H,'#000'); ctx.globalAlpha=1;
     const bob = Math.sin(t*3)*2;
+    if(W>=260){ drawPortrait(W/2-88, 34+bob, 2, blinkT<0?SPR.blink:SPR.head); drawPortrait(W/2+88, 34-bob, 2, SPR.tongue); }
     text('RUFI', W/2, 14+bob, 20, '#ffd84a', 'center', '#8a4f22');
     text('RUN', W/2, 38+bob, 14, '#fff', 'center', '#8a4f22');
     text('saltá cacas y charcos', W/2, 60, 6, '#fff');
@@ -358,6 +412,7 @@ function draw(){
   }
   if(state==='over'){
     ctx.globalAlpha=.4; r(0,0,W,H,'#000'); ctx.globalAlpha=1;
+    if(W>=260) drawPortrait(W/2-98, 30, 2, SPR.dead);
     text('GAME OVER', W/2, 22, 14, '#ff6b6b', 'center', '#400');
     text(deathMsg, W/2, 44, 6, '#fff');
     text('PUNTOS '+Math.floor(score), W/2, 60, 8, '#fff');
